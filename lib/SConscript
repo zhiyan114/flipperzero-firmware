@@ -14,7 +14,7 @@ env.Append(
         "lib/toolbox",
         "lib/u8g2",
         "lib/update_util",
-        "lib/print",
+        "lib/flibc",
     ],
     SDK_HEADERS=[
         File("one_wire/one_wire_host_timing.h"),
@@ -69,7 +69,7 @@ libs = env.BuildModules(
     [
         "STM32CubeWB",
         "freertos",
-        "print",
+        "flibc",
         "microtar",
         "toolbox",
         "ST25RFAL002",
