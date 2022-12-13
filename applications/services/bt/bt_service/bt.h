@@ -21,6 +21,8 @@ typedef enum {
 typedef enum {
     BtProfileSerial,
     BtProfileHidKeyboard,
+
+    BtProfileNum,
 } BtProfile;
 
 typedef void (*BtStatusChangedCallback)(BtStatus status, void* context);
