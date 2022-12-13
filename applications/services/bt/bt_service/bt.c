@@ -324,6 +324,12 @@ static void bt_change_profile(Bt* bt, BtMessage* message) {
         bt_settings_load(&bt->bt_settings);
         bt_close_rpc_connection(bt);
 
+        furi_hal_bt_stop_advertising();
+        bt->profile = message->data.profile;
+        // Load keys
+        if(!bt_keys_storage_load(bt)) {
+            FURI_LOG_W(TAG, "Failed to load bonding keys");
+        }
         FuriHalBtProfile furi_profile;
         if(message->data.profile == BtProfileHidKeyboard) {
             furi_profile = FuriHalBtProfileHidKeyboard;
@@ -337,7 +343,6 @@ static void bt_change_profile(Bt* bt, BtMessage* message) {
                 furi_hal_bt_start_advertising();
             }
             furi_hal_bt_set_key_storage_change_callback(bt_on_key_storage_change_callback, bt);
-            bt->profile = message->data.profile;
             if(message->result) {
                 *message->result = true;
             }

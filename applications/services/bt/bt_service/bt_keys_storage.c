@@ -8,18 +8,29 @@
 #define BT_KEYS_STORAGE_VERSION (0)
 #define BT_KEYS_STORAGE_MAGIC (0x18)
 
+#define BT_HID_KEYS_STORAGE_PATH INT_PATH(BT_HID_KEYS_STORAGE_FILE_NAME)
+
 bool bt_keys_storage_load(Bt* bt) {
     furi_assert(bt);
     bool file_loaded = false;
 
     furi_hal_bt_get_key_storage_buff(&bt->bt_keys_addr_start, &bt->bt_keys_size);
     furi_hal_bt_nvm_sram_sem_acquire();
-    file_loaded = saved_struct_load(
-        BT_KEYS_STORAGE_PATH,
-        bt->bt_keys_addr_start,
-        bt->bt_keys_size,
-        BT_KEYS_STORAGE_MAGIC,
-        BT_KEYS_STORAGE_VERSION);
+    if(bt->profile == BtProfileSerial) {
+        file_loaded = saved_struct_load(
+            BT_KEYS_STORAGE_PATH,
+            bt->bt_keys_addr_start,
+            bt->bt_keys_size,
+            BT_KEYS_STORAGE_MAGIC,
+            BT_KEYS_STORAGE_VERSION);
+    } else {
+        file_loaded = saved_struct_load(
+            BT_HID_KEYS_STORAGE_PATH,
+            bt->bt_keys_addr_start,
+            bt->bt_keys_size,
+            BT_KEYS_STORAGE_MAGIC,
+            BT_KEYS_STORAGE_VERSION);
+    }
     furi_hal_bt_nvm_sram_sem_release();
 
     return file_loaded;
@@ -31,12 +42,21 @@ bool bt_keys_storage_save(Bt* bt) {
     bool file_saved = false;
 
     furi_hal_bt_nvm_sram_sem_acquire();
-    file_saved = saved_struct_save(
-        BT_KEYS_STORAGE_PATH,
-        bt->bt_keys_addr_start,
-        bt->bt_keys_size,
-        BT_KEYS_STORAGE_MAGIC,
-        BT_KEYS_STORAGE_VERSION);
+    if(bt->profile == BtProfileSerial) {
+        file_saved = saved_struct_save(
+            BT_KEYS_STORAGE_PATH,
+            bt->bt_keys_addr_start,
+            bt->bt_keys_size,
+            BT_KEYS_STORAGE_MAGIC,
+            BT_KEYS_STORAGE_VERSION);
+    } else {
+        file_saved = saved_struct_save(
+            BT_HID_KEYS_STORAGE_PATH,
+            bt->bt_keys_addr_start,
+            bt->bt_keys_size,
+            BT_KEYS_STORAGE_MAGIC,
+            BT_KEYS_STORAGE_VERSION);
+    }
     furi_hal_bt_nvm_sram_sem_release();
 
     return file_saved;

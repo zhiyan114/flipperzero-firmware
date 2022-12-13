@@ -223,6 +223,10 @@ bool ble_glue_start() {
         return false;
     }
 
+    // Load key storage into RAM
+    // if(ble_glue->callback) {
+    //     ble_glue->callback();
+    // }
     bool ret = false;
     if(ble_app_init()) {
         FURI_LOG_I(TAG, "Radio stack started");
