@@ -5,13 +5,13 @@
 #include <storage/storage.h>
 
 #define BT_KEYS_STORAGE_PATH INT_PATH(BT_KEYS_STORAGE_FILE_NAME)
-#define BT_KEYS_STORAGE_VERSION (0)
+#define BT_KEYS_STORAGE_VERSION (1)
 #define BT_KEYS_STORAGE_MAGIC (0x18)
 
 #define TAG "BtKeyStorage"
 
 typedef struct {
-    uint32_t data_size;
+    uint16_t data_size;
     uint8_t* data;
 } BtKeysStorageProfileKeys;
 
@@ -20,29 +20,31 @@ struct BtKeysStorage {
     uint16_t nvm_sram_buff_size;
     uint32_t nvm_flash_total_size;
     FuriString* file_path;
+    uint8_t* raw_keys_buff;
+    size_t raw_keys_buff_size;
     BtKeysStorageProfileKeys profile_keys[BtProfileNum];
 };
 
-static bool bt_keys_storage_parse_profile_keys(
-    BtKeysStorage* instance,
-    uint8_t* saved_buff,
-    size_t saved_buff_size) {
+static bool bt_keys_storage_parse_profile_keys(BtKeysStorage* instance) {
     size_t buff_i = 0;
 
     bool profile_keys_loaded = true;
     for(size_t i = 0; i < BtProfileNum; i++) {
-        if(buff_i >= saved_buff_size) {
+        if(buff_i >= instance->raw_keys_buff_size) {
             profile_keys_loaded = false;
             break;
         }
-        instance->profile_keys[i].data_size = *(uint32_t*)(saved_buff + buff_i);
+        memcpy(
+            &instance->profile_keys[i].data_size,
+            &instance->raw_keys_buff[buff_i],
+            sizeof(instance->profile_keys[i].data_size));
         buff_i += sizeof(instance->profile_keys[i].data_size);
         if(instance->profile_keys[i].data_size == 0) continue;
-        if(buff_i >= saved_buff_size) {
+        if(buff_i >= instance->raw_keys_buff_size) {
             profile_keys_loaded = false;
             break;
         }
-        instance->profile_keys[i].data = &saved_buff[buff_i];
+        instance->profile_keys[i].data = &instance->raw_keys_buff[buff_i];
         buff_i += instance->profile_keys[i].data_size;
     }
 
@@ -105,6 +107,9 @@ bool bt_keys_storage_delete(Bt* bt) {
     return delete_succeed;
 }
 
+// static bool bt_keys_storage_load_raw(BtKeysStorage* instance, uint8_t* buff, uint16_t size) {
+// }
+
 BtKeysStorage* bt_keys_storage_alloc() {
     BtKeysStorage* instance = malloc(sizeof(BtKeysStorage));
     // Set nvm ram parameters
@@ -145,35 +150,37 @@ bool _bt_keys_storage_load(BtKeysStorage* instance, BtProfile profile) {
     bool loaded = false;
     do {
         // Get payload size
-        size_t payload_size = 0;
+        instance->raw_keys_buff_size = 0;
         if(!saved_struct_get_payload_size(
                furi_string_get_cstr(instance->file_path),
                BT_KEYS_STORAGE_MAGIC,
                BT_KEYS_STORAGE_VERSION,
-               &payload_size))
+               &instance->raw_keys_buff_size)) {
+            FURI_LOG_E(TAG, "Failed to read payload size");
             break;
+        }
 
         // Load raw payload
-        uint8_t* payload = malloc(payload_size);
+        instance->raw_keys_buff = malloc(instance->raw_keys_buff_size);
         if(!saved_struct_load(
                furi_string_get_cstr(instance->file_path),
-               payload,
-               payload_size,
+               instance->raw_keys_buff,
+               instance->raw_keys_buff_size,
                BT_KEYS_STORAGE_MAGIC,
                BT_KEYS_STORAGE_VERSION)) {
-            free(payload);
+            FURI_LOG_E(TAG, "Failed to load struct");
             break;
         }
 
         // Parse profile keys
-        if(!bt_keys_storage_parse_profile_keys(instance, payload, payload_size)) {
-            free(payload);
+        if(!bt_keys_storage_parse_profile_keys(instance)) {
+            FURI_LOG_E(TAG, "Failed to parse profiles keys");
             break;
         }
 
         // Load key data to ram
         if(instance->profile_keys[profile].data_size > instance->nvm_sram_buff_size) {
-            free(payload);
+            FURI_LOG_E(TAG, "NVM RAM buffer overflow");
             break;
         }
 
@@ -183,27 +190,172 @@ bool _bt_keys_storage_load(BtKeysStorage* instance, BtProfile profile) {
             instance->profile_keys[profile].data,
             instance->profile_keys[profile].data_size);
         furi_hal_bt_nvm_sram_sem_release();
-        free(payload);
 
         loaded = true;
     } while(false);
 
+    // Free allocated memory
+    if(instance->raw_keys_buff) {
+        free(instance->raw_keys_buff);
+        instance->raw_keys_buff = NULL;
+    }
+    instance->raw_keys_buff_size = 0;
+
     return loaded;
 }
 
-bool bt_keys_storage_update(BtKeysStorage* instance, uint32_t start_addr, uint32_t size) {
+bool bt_keys_storage_update(
+    BtKeysStorage* instance,
+    BtProfile profile,
+    uint8_t* start_addr,
+    uint32_t size) {
     furi_assert(instance);
-    UNUSED(start_addr);
-    UNUSED(size);
-
-    FURI_LOG_I(
-        TAG,
-        "Base address: %ld. Start addr: %ld. Size changed: %ld",
-        (uint32_t)instance->nvm_sram_buff,
-        start_addr,
-        size);
+    furi_assert(profile < BtProfileNum);
 
     bool updated = false;
+    Storage* storage = furi_record_open(RECORD_STORAGE);
 
+    do {
+        uint32_t offset = start_addr - instance->nvm_sram_buff;
+        if(offset + size >= instance->nvm_sram_buff_size) {
+            FURI_LOG_E(TAG, "NVM RAM buffer overflow");
+            break;
+        }
+
+        FURI_LOG_I(
+            TAG,
+            "Base address: %p. Start update address: %p. Size changed: %ld",
+            (void*)instance->nvm_sram_buff,
+            start_addr,
+            size);
+
+        if(storage_common_stat(storage, furi_string_get_cstr(instance->file_path), NULL) ==
+           FSE_OK) {
+            // Load all profiles keys and modify
+            instance->raw_keys_buff_size = 0;
+            if(!saved_struct_get_payload_size(
+                   furi_string_get_cstr(instance->file_path),
+                   BT_KEYS_STORAGE_MAGIC,
+                   BT_KEYS_STORAGE_VERSION,
+                   &instance->raw_keys_buff_size)) {
+                FURI_LOG_E(TAG, "Failed to read saved file");
+                break;
+            }
+            instance->raw_keys_buff = malloc(instance->raw_keys_buff_size);
+            if(!saved_struct_load(
+                   furi_string_get_cstr(instance->file_path),
+                   instance->raw_keys_buff,
+                   instance->raw_keys_buff_size,
+                   BT_KEYS_STORAGE_MAGIC,
+                   BT_KEYS_STORAGE_VERSION)) {
+                FURI_LOG_E(TAG, "Failed to load payload");
+                break;
+            }
+            // Parse saved profile keys
+            if(!bt_keys_storage_parse_profile_keys(instance)) {
+                FURI_LOG_E(TAG, "Failed to parse profiles keys");
+                break;
+            }
+            // Calculate new keys storage size
+            size_t new_raw_key_buff_size = 0;
+            size_t new_profile_size = 0;
+            for(size_t i = 0; i < COUNT_OF(instance->profile_keys); i++) {
+                new_raw_key_buff_size += sizeof(instance->profile_keys[i].data_size);
+                if(i == profile) {
+                    new_profile_size = start_addr - instance->nvm_sram_buff + size;
+                    new_raw_key_buff_size += new_profile_size;
+                } else {
+                    new_raw_key_buff_size += instance->profile_keys[i].data_size;
+                }
+            }
+            // Fill new keys storage
+            uint8_t* new_raw_key_buff = malloc(new_raw_key_buff_size);
+            uint16_t buff_i = 0;
+            for(size_t i = 0; i < COUNT_OF(instance->profile_keys); i++) {
+                memcpy(
+                    &new_raw_key_buff[buff_i],
+                    &instance->profile_keys[i].data_size,
+                    sizeof(instance->profile_keys[i].data_size));
+                buff_i += sizeof(instance->profile_keys[i].data_size);
+                if(i == profile) {
+                    memcpy(&new_raw_key_buff[buff_i], instance->nvm_sram_buff, new_profile_size);
+                    buff_i += new_profile_size;
+                } else {
+                    if(instance->profile_keys[i].data_size) {
+                        memcpy(
+                            &new_raw_key_buff[buff_i],
+                            instance->profile_keys[i].data,
+                            instance->profile_keys[i].data_size);
+                        buff_i += instance->profile_keys[i].data_size;
+                    }
+                }
+            }
+            // Save struct
+            if(!saved_struct_save(
+                   furi_string_get_cstr(instance->file_path),
+                   new_raw_key_buff,
+                   new_raw_key_buff_size,
+                   BT_KEYS_STORAGE_MAGIC,
+                   BT_KEYS_STORAGE_VERSION)) {
+                FURI_LOG_E(TAG, "Failed to save keys to file");
+                free(new_raw_key_buff);
+                break;
+            }
+            free(new_raw_key_buff);
+            updated = true;
+        } else {
+            instance->raw_keys_buff_size = 0;
+            for(size_t i = 0; i < COUNT_OF(instance->profile_keys); i++) {
+                instance->raw_keys_buff_size += sizeof(instance->profile_keys[i].data_size);
+                if(i == profile) {
+                    instance->raw_keys_buff_size += offset + size;
+                    instance->profile_keys[i].data_size = offset + size;
+                    instance->profile_keys[i].data = &instance->nvm_sram_buff[offset];
+                } else {
+                    instance->profile_keys[i].data_size = 0;
+                }
+            }
+            // Prepare raw data to save
+            instance->raw_keys_buff = malloc(instance->raw_keys_buff_size);
+            uint16_t buff_i = 0;
+            for(size_t i = 0; i < COUNT_OF(instance->profile_keys); i++) {
+                memcpy(
+                    instance->raw_keys_buff,
+                    &instance->profile_keys[i].data_size,
+                    sizeof(instance->profile_keys[i].data_size));
+                buff_i += sizeof(instance->profile_keys[i].data_size);
+                if(instance->profile_keys[i].data_size) {
+                    memcpy(
+                        instance->raw_keys_buff,
+                        instance->profile_keys[i].data,
+                        instance->profile_keys[i].data_size);
+                }
+            }
+            // Save raw data to file
+            furi_hal_bt_nvm_sram_sem_acquire();
+            bool saved = saved_struct_save(
+                furi_string_get_cstr(instance->file_path),
+                instance->raw_keys_buff,
+                instance->raw_keys_buff_size,
+                BT_KEYS_STORAGE_MAGIC,
+                BT_KEYS_STORAGE_VERSION);
+            furi_hal_bt_nvm_sram_sem_release();
+
+            if(!saved) {
+                FURI_LOG_E(TAG, "Failed to save new file");
+                break;
+            }
+
+            updated = true;
+        }
+    } while(false);
+    // Free allocated memory
+    if(instance->raw_keys_buff) {
+        free(instance->raw_keys_buff);
+        instance->raw_keys_buff = NULL;
+    }
+    instance->raw_keys_buff_size = 0;
+
+    furi_record_close(RECORD_STORAGE);
     return updated;
 }

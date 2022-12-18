@@ -21,4 +21,8 @@ void bt_keys_storage_set_ram_params(BtKeysStorage* instance, uint8_t* buff, uint
 
 bool _bt_keys_storage_load(BtKeysStorage* instance, BtProfile profile);
 
-bool bt_keys_storage_update(BtKeysStorage* instance, uint32_t start_addr, uint32_t size);
+bool bt_keys_storage_update(
+    BtKeysStorage* instance,
+    BtProfile profile,
+    uint8_t* start_addr,
+    uint32_t size);
