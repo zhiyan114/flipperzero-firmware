@@ -159,6 +159,7 @@ bool _bt_keys_storage_load(BtKeysStorage* instance, BtProfile profile) {
             FURI_LOG_E(TAG, "Failed to read payload size");
             break;
         }
+        FURI_LOG_W(TAG, "Payload size: %d", instance->raw_keys_buff_size);
 
         // Load raw payload
         instance->raw_keys_buff = malloc(instance->raw_keys_buff_size);
@@ -258,15 +259,14 @@ bool bt_keys_storage_update(
             }
             // Calculate new keys storage size
             size_t new_raw_key_buff_size = 0;
-            size_t new_profile_size = 0;
             for(size_t i = 0; i < COUNT_OF(instance->profile_keys); i++) {
                 new_raw_key_buff_size += sizeof(instance->profile_keys[i].data_size);
                 if(i == profile) {
-                    new_profile_size = start_addr - instance->nvm_sram_buff + size;
-                    new_raw_key_buff_size += new_profile_size;
-                } else {
-                    new_raw_key_buff_size += instance->profile_keys[i].data_size;
+                    instance->profile_keys[i].data_size =
+                        start_addr - instance->nvm_sram_buff + size;
+                    instance->profile_keys[i].data = instance->nvm_sram_buff;
                 }
+                new_raw_key_buff_size += instance->profile_keys[i].data_size;
             }
             // Fill new keys storage
             uint8_t* new_raw_key_buff = malloc(new_raw_key_buff_size);
@@ -277,17 +277,12 @@ bool bt_keys_storage_update(
                     &instance->profile_keys[i].data_size,
                     sizeof(instance->profile_keys[i].data_size));
                 buff_i += sizeof(instance->profile_keys[i].data_size);
-                if(i == profile) {
-                    memcpy(&new_raw_key_buff[buff_i], instance->nvm_sram_buff, new_profile_size);
-                    buff_i += new_profile_size;
-                } else {
-                    if(instance->profile_keys[i].data_size) {
-                        memcpy(
-                            &new_raw_key_buff[buff_i],
-                            instance->profile_keys[i].data,
-                            instance->profile_keys[i].data_size);
-                        buff_i += instance->profile_keys[i].data_size;
-                    }
+                if(instance->profile_keys[i].data_size) {
+                    memcpy(
+                        &new_raw_key_buff[buff_i],
+                        instance->profile_keys[i].data,
+                        instance->profile_keys[i].data_size);
+                    buff_i += instance->profile_keys[i].data_size;
                 }
             }
             // Save struct
@@ -301,6 +296,7 @@ bool bt_keys_storage_update(
                 free(new_raw_key_buff);
                 break;
             }
+            FURI_LOG_I(TAG, "Updated payload sizeeeeee: %d", new_raw_key_buff_size);
             free(new_raw_key_buff);
             updated = true;
         } else {
@@ -320,15 +316,16 @@ bool bt_keys_storage_update(
             uint16_t buff_i = 0;
             for(size_t i = 0; i < COUNT_OF(instance->profile_keys); i++) {
                 memcpy(
-                    instance->raw_keys_buff,
+                    &instance->raw_keys_buff[buff_i],
                     &instance->profile_keys[i].data_size,
                     sizeof(instance->profile_keys[i].data_size));
                 buff_i += sizeof(instance->profile_keys[i].data_size);
                 if(instance->profile_keys[i].data_size) {
                     memcpy(
-                        instance->raw_keys_buff,
+                        &instance->raw_keys_buff[buff_i],
                         instance->profile_keys[i].data,
                         instance->profile_keys[i].data_size);
+                    buff_i += instance->profile_keys[i].data_size;
                 }
             }
             // Save raw data to file
@@ -340,6 +337,7 @@ bool bt_keys_storage_update(
                 BT_KEYS_STORAGE_MAGIC,
                 BT_KEYS_STORAGE_VERSION);
             furi_hal_bt_nvm_sram_sem_release();
+            FURI_LOG_I(TAG, "Updated payload size: %d", instance->raw_keys_buff_size);
 
             if(!saved) {
                 FURI_LOG_E(TAG, "Failed to save new file");
