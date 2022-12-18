@@ -8,6 +8,8 @@
 #define BT_KEYS_STORAGE_VERSION (0)
 #define BT_KEYS_STORAGE_MAGIC (0x18)
 
+#define TAG "BtKeyStorage"
+
 typedef struct {
     uint32_t data_size;
     uint8_t* data;
@@ -193,6 +195,13 @@ bool bt_keys_storage_update(BtKeysStorage* instance, uint32_t start_addr, uint32
     furi_assert(instance);
     UNUSED(start_addr);
     UNUSED(size);
+
+    FURI_LOG_I(
+        TAG,
+        "Base address: %ld. Start addr: %ld. Size changed: %ld",
+        (uint32_t)instance->nvm_sram_buff,
+        start_addr,
+        size);
 
     bool updated = false;
 
