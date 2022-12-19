@@ -55,7 +55,7 @@ static void bt_test_keys_storage_profile(BtProfile profile) {
             nvm_change_size_on_connection),
         "Failed to update key storage on initial connect");
     memset(bt_test->nvm_ram_buff_dut, 0, BT_TEST_NVM_RAM_BUFF_SIZE);
-    mu_assert(_bt_keys_storage_load(bt_test->bt_keys_storage, profile), "Failed to load NVM");
+    mu_assert(bt_keys_storage_load(bt_test->bt_keys_storage, profile), "Failed to load NVM");
     mu_assert(
         memcmp(
             bt_test->nvm_ram_buff_ref, bt_test->nvm_ram_buff_dut, nvm_change_size_on_connection) ==
@@ -82,7 +82,7 @@ static void bt_test_keys_storage_profile(BtProfile profile) {
             nvm_disconnect_update_size),
         "Failed to update key storage on initial disconnect");
     memset(bt_test->nvm_ram_buff_dut, 0, BT_TEST_NVM_RAM_BUFF_SIZE);
-    mu_assert(_bt_keys_storage_load(bt_test->bt_keys_storage, profile), "Failed to load NVM");
+    mu_assert(bt_keys_storage_load(bt_test->bt_keys_storage, profile), "Failed to load NVM");
     mu_assert(
         memcmp(bt_test->nvm_ram_buff_ref, bt_test->nvm_ram_buff_dut, nvm_total_size) == 0,
         "Wrong buffer loaded");

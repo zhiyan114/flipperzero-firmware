@@ -331,7 +331,7 @@ static void bt_change_profile(Bt* bt, BtMessage* message) {
         furi_hal_bt_stop_advertising();
         bt->profile = message->data.profile;
         // Load keys
-        if(!_bt_keys_storage_load(bt->key_storage, bt->profile)) {
+        if(!bt_keys_storage_load(bt->key_storage, bt->profile)) {
             FURI_LOG_W(TAG, "Failed to load bonding keys");
         }
         FuriHalBtProfile furi_profile;
@@ -381,7 +381,7 @@ int32_t bt_srv(void* p) {
         return 0;
     }
 
-    if(!_bt_keys_storage_load(bt->key_storage, bt->profile)) {
+    if(!bt_keys_storage_load(bt->key_storage, bt->profile)) {
         FURI_LOG_W(TAG, "Failed to load bonding keys");
     }
 
