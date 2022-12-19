@@ -2,41 +2,64 @@
 #include <furi_hal.h>
 #include "../minunit.h"
 
-#include "../../../../applications/services/bt/bt_service/bt_keys_storage.h"
+#include <bt/bt_service/bt_keys_storage.h>
 #include <storage/storage.h>
 
 #define BT_TEST_KEY_STORAGE_FILE_PATH EXT_PATH("unit_tests/bt_test.keys")
 #define BT_TEST_NVM_RAM_BUFF_SIZE (507 * 4) // The same as in ble NVM storage
 
-#define TAG "BtUnitTest"
+typedef struct {
+    Storage* storage;
+    BtKeysStorage* bt_keys_storage;
+    uint8_t* nvm_ram_buff_dut;
+    uint8_t* nvm_ram_buff_ref;
+} BtTest;
 
-MU_TEST(test_bt_keys_storage) {
-    Storage* storage = furi_record_open(RECORD_STORAGE);
-    BtKeysStorage* instance = bt_keys_storage_alloc();
+BtTest* bt_test = NULL;
+
+void bt_test_alloc() {
+    bt_test = malloc(sizeof(BtTest));
+    bt_test->storage = furi_record_open(RECORD_STORAGE);
+    bt_test->nvm_ram_buff_dut = malloc(BT_TEST_NVM_RAM_BUFF_SIZE);
+    bt_test->nvm_ram_buff_ref = malloc(BT_TEST_NVM_RAM_BUFF_SIZE);
+    bt_test->bt_keys_storage = bt_keys_storage_alloc();
     // Change default key storage file path
-    bt_keys_storage_set_file_path(instance, BT_TEST_KEY_STORAGE_FILE_PATH);
-    // Allocate and set nvm buffer
-    uint8_t* nvm_ram_buff_dut = malloc(BT_TEST_NVM_RAM_BUFF_SIZE);
-    uint8_t* nvm_ram_buff_ref = malloc(BT_TEST_NVM_RAM_BUFF_SIZE);
-    bt_keys_storage_set_ram_params(instance, nvm_ram_buff_dut, BT_TEST_NVM_RAM_BUFF_SIZE);
+    bt_keys_storage_set_file_path(bt_test->bt_keys_storage, BT_TEST_KEY_STORAGE_FILE_PATH);
+    bt_keys_storage_set_ram_params(
+        bt_test->bt_keys_storage, bt_test->nvm_ram_buff_dut, BT_TEST_NVM_RAM_BUFF_SIZE);
+}
+
+void bt_test_free() {
+    furi_assert(bt_test);
+    free(bt_test->nvm_ram_buff_ref);
+    free(bt_test->nvm_ram_buff_dut);
+    bt_keys_storage_free(bt_test->bt_keys_storage);
+    furi_record_close(RECORD_STORAGE);
+    free(bt_test);
+    bt_test = NULL;
+}
+
+static void bt_test_keys_storage_profile(BtProfile profile) {
     // Emulate nvm change on initial connection
     const int nvm_change_size_on_connection = 88;
     for(size_t i = 0; i < nvm_change_size_on_connection; i++) {
-        nvm_ram_buff_dut[i] = rand();
-        nvm_ram_buff_ref[i] = nvm_ram_buff_dut[i];
+        bt_test->nvm_ram_buff_dut[i] = rand();
+        bt_test->nvm_ram_buff_ref[i] = bt_test->nvm_ram_buff_dut[i];
     }
     // Emulate update storage on initial connect
     mu_assert(
         bt_keys_storage_update(
-            instance, BtProfileSerial, nvm_ram_buff_dut, nvm_change_size_on_connection),
+            bt_test->bt_keys_storage,
+            profile,
+            bt_test->nvm_ram_buff_dut,
+            nvm_change_size_on_connection),
         "Failed to update key storage on initial connect");
+    memset(bt_test->nvm_ram_buff_dut, 0, BT_TEST_NVM_RAM_BUFF_SIZE);
+    mu_assert(_bt_keys_storage_load(bt_test->bt_keys_storage, profile), "Failed to load NVM");
     mu_assert(
-        storage_common_stat(storage, BT_TEST_KEY_STORAGE_FILE_PATH, NULL) == FSE_OK,
-        "Failed in creating keys file");
-    memset(nvm_ram_buff_dut, 0, BT_TEST_NVM_RAM_BUFF_SIZE);
-    mu_assert(_bt_keys_storage_load(instance, BtProfileSerial), "Failed to load NVM");
-    mu_assert(
-        memcmp(nvm_ram_buff_ref, nvm_ram_buff_dut, nvm_change_size_on_connection) == 0,
+        memcmp(
+            bt_test->nvm_ram_buff_ref, bt_test->nvm_ram_buff_dut, nvm_change_size_on_connection) ==
+            0,
         "Wrong buffer loaded");
 
     const int nvm_disconnect_update_offset = 84;
@@ -48,31 +71,64 @@ MU_TEST(test_bt_keys_storage) {
     for(size_t i = nvm_disconnect_update_offset;
         i < nvm_disconnect_update_offset + nvm_disconnect_update_size;
         i++) {
-        nvm_ram_buff_dut[i] = rand();
-        nvm_ram_buff_ref[i] = nvm_ram_buff_dut[i];
+        bt_test->nvm_ram_buff_dut[i] = rand();
+        bt_test->nvm_ram_buff_ref[i] = bt_test->nvm_ram_buff_dut[i];
     }
     mu_assert(
         bt_keys_storage_update(
-            instance,
-            BtProfileSerial,
-            &nvm_ram_buff_dut[nvm_disconnect_update_offset],
+            bt_test->bt_keys_storage,
+            profile,
+            &bt_test->nvm_ram_buff_dut[nvm_disconnect_update_offset],
             nvm_disconnect_update_size),
         "Failed to update key storage on initial disconnect");
-    memset(nvm_ram_buff_dut, 0, BT_TEST_NVM_RAM_BUFF_SIZE);
-    mu_assert(_bt_keys_storage_load(instance, BtProfileSerial), "Failed to load NVM");
+    memset(bt_test->nvm_ram_buff_dut, 0, BT_TEST_NVM_RAM_BUFF_SIZE);
+    mu_assert(_bt_keys_storage_load(bt_test->bt_keys_storage, profile), "Failed to load NVM");
     mu_assert(
-        memcmp(nvm_ram_buff_ref, nvm_ram_buff_dut, nvm_total_size) == 0, "Wrong buffer loaded");
+        memcmp(bt_test->nvm_ram_buff_ref, bt_test->nvm_ram_buff_dut, nvm_total_size) == 0,
+        "Wrong buffer loaded");
+}
 
-    free(nvm_ram_buff_dut);
-    free(nvm_ram_buff_ref);
+static void bt_test_keys_remove_test_file() {
+    mu_assert(
+        storage_simply_remove(bt_test->storage, BT_TEST_KEY_STORAGE_FILE_PATH),
+        "Can't remove test file");
+}
 
-    bt_keys_storage_free(instance);
+MU_TEST(bt_test_keys_storage_serial_profile) {
+    furi_assert(bt_test);
 
-    furi_record_close(RECORD_STORAGE);
+    bt_test_keys_remove_test_file();
+    bt_test_keys_storage_profile(BtProfileSerial);
+    bt_test_keys_remove_test_file();
+}
+
+MU_TEST(bt_test_keys_storage_hid_profile) {
+    furi_assert(bt_test);
+
+    bt_test_keys_remove_test_file();
+    bt_test_keys_storage_profile(BtProfileHidKeyboard);
+    bt_test_keys_remove_test_file();
+}
+
+MU_TEST(bt_test_keys_storage_switch_profiles) {
+    furi_assert(bt_test);
+
+    bt_test_keys_remove_test_file();
+    for(size_t i = 0; i < 20; i++) {
+        BtProfile profile = rand() % BtProfileNum;
+        bt_test_keys_storage_profile(profile);
+    }
+    bt_test_keys_remove_test_file();
 }
 
 MU_TEST_SUITE(test_bt) {
-    MU_RUN_TEST(test_bt_keys_storage);
+    bt_test_alloc();
+
+    MU_RUN_TEST(bt_test_keys_storage_serial_profile);
+    MU_RUN_TEST(bt_test_keys_storage_hid_profile);
+    MU_RUN_TEST(bt_test_keys_storage_switch_profiles);
+
+    bt_test_free();
 }
 
 int run_minunit_test_bt() {
