@@ -1,6 +1,7 @@
 #include "bt_keys_storage.h"
 
 #include <furi.h>
+#include <furi_hal_bt.h>
 #include <lib/toolbox/saved_struct.h>
 #include <storage/storage.h>
 
@@ -51,48 +52,6 @@ static bool bt_keys_storage_parse_profile_keys(BtKeysStorage* instance) {
     return profile_keys_loaded;
 }
 
-bool bt_keys_storage_load(Bt* bt) {
-    furi_assert(bt);
-    bool file_loaded = false;
-
-    size_t payload_size = 0;
-    if(saved_struct_get_payload_size(
-           BT_KEYS_STORAGE_PATH, BT_KEYS_STORAGE_MAGIC, BT_KEYS_STORAGE_VERSION, &payload_size)) {
-        FURI_LOG_I("BT KEY STORAGE", "Payload size: %d", payload_size);
-    } else {
-        FURI_LOG_E("BT KEY STORAGE", "Faileld to load payload size");
-    }
-
-    furi_hal_bt_get_key_storage_buff(&bt->bt_keys_addr_start, &bt->bt_keys_size);
-    furi_hal_bt_nvm_sram_sem_acquire();
-    file_loaded = saved_struct_load(
-        BT_KEYS_STORAGE_PATH,
-        bt->bt_keys_addr_start,
-        bt->bt_keys_size,
-        BT_KEYS_STORAGE_MAGIC,
-        BT_KEYS_STORAGE_VERSION);
-    furi_hal_bt_nvm_sram_sem_release();
-
-    return file_loaded;
-}
-
-bool bt_keys_storage_save(Bt* bt) {
-    furi_assert(bt);
-    furi_assert(bt->bt_keys_addr_start);
-    bool file_saved = false;
-
-    furi_hal_bt_nvm_sram_sem_acquire();
-    file_saved = saved_struct_save(
-        BT_KEYS_STORAGE_PATH,
-        bt->bt_keys_addr_start,
-        bt->bt_keys_size,
-        BT_KEYS_STORAGE_MAGIC,
-        BT_KEYS_STORAGE_VERSION);
-    furi_hal_bt_nvm_sram_sem_release();
-
-    return file_saved;
-}
-
 bool bt_keys_storage_delete(Bt* bt) {
     furi_assert(bt);
     bool delete_succeed = false;
@@ -106,9 +65,6 @@ bool bt_keys_storage_delete(Bt* bt) {
 
     return delete_succeed;
 }
-
-// static bool bt_keys_storage_load_raw(BtKeysStorage* instance, uint8_t* buff, uint16_t size) {
-// }
 
 BtKeysStorage* bt_keys_storage_alloc() {
     BtKeysStorage* instance = malloc(sizeof(BtKeysStorage));

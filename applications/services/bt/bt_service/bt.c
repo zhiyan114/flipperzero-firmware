@@ -1,6 +1,5 @@
 #include "bt_i.h"
 #include "battery_service.h"
-#include "bt_keys_storage.h"
 
 #include <notification/notification_messages.h>
 #include <gui/elements.h>
@@ -117,6 +116,8 @@ Bt* bt_alloc() {
     if(!bt_settings_load(&bt->bt_settings)) {
         bt_settings_save(&bt->bt_settings);
     }
+    // Key storage
+    bt->key_storage = bt_keys_storage_alloc();
     // Alloc queue
     bt->message_queue = furi_message_queue_alloc(8, sizeof(BtMessage));
 
@@ -286,7 +287,10 @@ static void bt_on_key_storage_change_callback(uint8_t* addr, uint16_t size, void
     furi_assert(context);
     Bt* bt = context;
     FURI_LOG_I(TAG, "Changed addr start: %p, size changed: %d", addr, size);
-    BtMessage message = {.type = BtMessageTypeKeysStorageUpdated};
+    BtMessage message = {
+        .type = BtMessageTypeKeysStorageUpdated,
+        .data.key_storage_data.start_address = addr,
+        .data.key_storage_data.size = size};
     furi_check(
         furi_message_queue_put(bt->message_queue, &message, FuriWaitForever) == FuriStatusOk);
 }
@@ -327,7 +331,7 @@ static void bt_change_profile(Bt* bt, BtMessage* message) {
         furi_hal_bt_stop_advertising();
         bt->profile = message->data.profile;
         // Load keys
-        if(!bt_keys_storage_load(bt)) {
+        if(!_bt_keys_storage_load(bt->key_storage, bt->profile)) {
             FURI_LOG_W(TAG, "Failed to load bonding keys");
         }
         FuriHalBtProfile furi_profile;
@@ -377,8 +381,7 @@ int32_t bt_srv(void* p) {
         return 0;
     }
 
-    // Read keys
-    if(!bt_keys_storage_load(bt)) {
+    if(!_bt_keys_storage_load(bt->key_storage, bt->profile)) {
         FURI_LOG_W(TAG, "Failed to load bonding keys");
     }
 
@@ -423,7 +426,11 @@ int32_t bt_srv(void* p) {
             // Display PIN code
             bt_pin_code_show(bt, message.data.pin_code);
         } else if(message.type == BtMessageTypeKeysStorageUpdated) {
-            bt_keys_storage_save(bt);
+            bt_keys_storage_update(
+                bt->key_storage,
+                bt->profile,
+                message.data.key_storage_data.start_address,
+                message.data.key_storage_data.size);
         } else if(message.type == BtMessageTypeSetProfile) {
             bt_change_profile(bt, &message);
         } else if(message.type == BtMessageTypeDisconnect) {
