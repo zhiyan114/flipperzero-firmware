@@ -1,0 +1,24 @@
+var searchData=
+[
+  ['scene_5fmanager_5falloc_0',['scene_manager_alloc',['../scene__manager_8h.html#a4af91f038c9ff550781e3b041521d775',1,'scene_manager.c']]],
+  ['scene_5fmanager_5ffree_1',['scene_manager_free',['../scene__manager_8h.html#aef61decd00ad5ce1e7c5e5eeac084781',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fget_5fscene_5fstate_2',['scene_manager_get_scene_state',['../scene__manager_8h.html#a26384a14d671761d53ed7c89f0075cfe',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fhandle_5fback_5fevent_3',['scene_manager_handle_back_event',['../scene__manager_8h.html#a0cdb32fec521fbe715156c3a66fa2134',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fhandle_5fcustom_5fevent_4',['scene_manager_handle_custom_event',['../scene__manager_8h.html#aa408ddea2867829b43ea6e233e7d4e1f',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fhandle_5ftick_5fevent_5',['scene_manager_handle_tick_event',['../scene__manager_8h.html#acedb00f9104f4e9ac7acd29097a0b88b',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fhas_5fprevious_5fscene_6',['scene_manager_has_previous_scene',['../scene__manager_8h.html#a0f0ae9956d5bd0bd84b6c2782a7e1d56',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fnext_5fscene_7',['scene_manager_next_scene',['../scene__manager_8h.html#a6bd22876c2f7b40154a55a66331fad3a',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fprevious_5fscene_8',['scene_manager_previous_scene',['../scene__manager_8h.html#aeed370a95719797ef77151b0b3663339',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fsearch_5fand_5fswitch_5fto_5fanother_5fscene_9',['scene_manager_search_and_switch_to_another_scene',['../scene__manager_8h.html#a03528bea04091e85227a7816d718491b',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fsearch_5fand_5fswitch_5fto_5fprevious_5fscene_10',['scene_manager_search_and_switch_to_previous_scene',['../scene__manager_8h.html#a2b5da6569b595d7e28d84b08be44932e',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fsearch_5fand_5fswitch_5fto_5fprevious_5fscene_5fone_5fof_11',['scene_manager_search_and_switch_to_previous_scene_one_of',['../scene__manager_8h.html#a0cd83adac254a3b15b9450d3e6201633',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fset_5fscene_5fstate_12',['scene_manager_set_scene_state',['../scene__manager_8h.html#abb9ddc3be5cb94d54718a9798bd18b02',1,'scene_manager.c']]],
+  ['scene_5fmanager_5fstop_13',['scene_manager_stop',['../scene__manager_8h.html#a34aebd5cf789f48921e830c3c877c78f',1,'scene_manager.c']]],
+  ['submenu_5fadd_5fitem_14',['submenu_add_item',['../submenu_8h.html#aabdfbc59886f191238d2a4da77168398',1,'submenu.c']]],
+  ['submenu_5falloc_15',['submenu_alloc',['../submenu_8h.html#a22a5906bf09cd606505b74936cf57604',1,'submenu.c']]],
+  ['submenu_5ffree_16',['submenu_free',['../submenu_8h.html#a3c5f3e6980a5d8c67ae0d2e2ca67ab8c',1,'submenu.c']]],
+  ['submenu_5fget_5fview_17',['submenu_get_view',['../submenu_8h.html#a785f6989de3886a4302171c0f67da153',1,'submenu.c']]],
+  ['submenu_5freset_18',['submenu_reset',['../submenu_8h.html#aa87226ce55f6156516b382e3f04053a4',1,'submenu.c']]],
+  ['submenu_5fset_5fheader_19',['submenu_set_header',['../submenu_8h.html#a5fe284fbfa2bed3d3042503ce5a46047',1,'submenu.c']]],
+  ['submenu_5fset_5fselected_5fitem_20',['submenu_set_selected_item',['../submenu_8h.html#aedad41e541fab930e470e33f190202ab',1,'submenu.c']]]
+];
