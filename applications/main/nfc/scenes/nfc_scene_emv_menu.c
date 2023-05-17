@@ -1,6 +1,9 @@
 #include "../nfc_i.h"
+#include <dolphin/dolphin.h>
 
 enum SubmenuIndex {
+    SubmenuIndexSaveUid,
+    SubmenuIndexEmulateUid,
     SubmenuIndexInfo,
 };
 
@@ -14,6 +17,10 @@ void nfc_scene_emv_menu_on_enter(void* context) {
     Nfc* nfc = context;
     Submenu* submenu = nfc->submenu;
 
+    submenu_add_item(
+        submenu, "Save", SubmenuIndexSaveUid, nfc_scene_emv_menu_submenu_callback, nfc);
+    submenu_add_item(
+        submenu, "Emulate UID", SubmenuIndexEmulateUid, nfc_scene_emv_menu_submenu_callback, nfc);
     submenu_add_item(submenu, "Info", SubmenuIndexInfo, nfc_scene_emv_menu_submenu_callback, nfc);
     submenu_set_selected_item(
         nfc->submenu, scene_manager_get_scene_state(nfc->scene_manager, NfcSceneEmvMenu));
@@ -26,10 +33,25 @@ bool nfc_scene_emv_menu_on_event(void* context, SceneManagerEvent event) {
     bool consumed = false;
 
     if(event.type == SceneManagerEventTypeCustom) {
-        if(event.event == SubmenuIndexInfo) {
+        if(event.event == SubmenuIndexSaveUid) {
+            nfc->dev->format = NfcDeviceSaveFormatBankCard;
+            // Clear device name
+            nfc_device_set_name(nfc->dev, "");
+            scene_manager_next_scene(nfc->scene_manager, NfcSceneSaveName);
+            consumed = true;
+        } else if(event.event == SubmenuIndexEmulateUid) {
+            scene_manager_next_scene(nfc->scene_manager, NfcSceneEmulateUid);
+            if(scene_manager_has_previous_scene(nfc->scene_manager, NfcSceneSetType)) {
+                DOLPHIN_DEED(DolphinDeedNfcAddEmulate);
+            } else {
+                DOLPHIN_DEED(DolphinDeedNfcEmulate);
+            }
+            consumed = true;
+        } else if(event.event == SubmenuIndexInfo) {
             scene_manager_next_scene(nfc->scene_manager, NfcSceneNfcDataInfo);
             consumed = true;
         }
+
         scene_manager_set_scene_state(nfc->scene_manager, NfcSceneEmvMenu, event.event);
     } else if(event.type == SceneManagerEventTypeBack) {
         consumed = scene_manager_previous_scene(nfc->scene_manager);
