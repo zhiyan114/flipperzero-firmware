@@ -657,6 +657,7 @@ bool nfc_device_load_mifare_df_data(FlipperFormat* file, NfcDevice* dev) {
     return parsed;
 }
 
+
 static bool nfc_device_save_slix_data(
     FlipperFormat* file,
     NfcDevice* dev,
@@ -990,6 +991,8 @@ static bool nfc_device_save_bank_card_data(FlipperFormat* file, NfcDevice* dev) 
     return saved;
 }
 
+
+// Leave for backward compatibility
 bool nfc_device_load_bank_card_data(FlipperFormat* file, NfcDevice* dev) {
     bool parsed = false;
     EmvData* data = &dev->dev_data.emv_data;
