@@ -68,13 +68,14 @@ static bool picopass_device_save_file(
                 if(!flipper_format_write_uint32(file, "Facility Code", &fc, 1)) break;
                 if(!flipper_format_write_uint32(file, "Card Number", &cn, 1)) break;
                 if(!flipper_format_write_hex(
-                       file, "Credential", pacs->credential, PICOPASS_BLOCK_LEN))
+                       file, "Credential", pacs->credential, RFAL_PICOPASS_BLOCK_LEN))
                     break;
                 if(pacs->pin_length > 0) {
-                    if(!flipper_format_write_hex(file, "PIN\t\t", pacs->pin0, PICOPASS_BLOCK_LEN))
+                    if(!flipper_format_write_hex(
+                           file, "PIN\t\t", pacs->pin0, RFAL_PICOPASS_BLOCK_LEN))
                         break;
                     if(!flipper_format_write_hex(
-                           file, "PIN(cont.)\t", pacs->pin1, PICOPASS_BLOCK_LEN))
+                           file, "PIN(cont.)\t", pacs->pin1, RFAL_PICOPASS_BLOCK_LEN))
                         break;
                 }
             }
@@ -88,7 +89,10 @@ static bool picopass_device_save_file(
             for(size_t i = 0; i < app_limit; i++) {
                 furi_string_printf(temp_str, "Block %d", i);
                 if(!flipper_format_write_hex(
-                       file, furi_string_get_cstr(temp_str), AA1[i].data, PICOPASS_BLOCK_LEN)) {
+                       file,
+                       furi_string_get_cstr(temp_str),
+                       AA1[i].data,
+                       RFAL_PICOPASS_BLOCK_LEN)) {
                     block_saved = false;
                     break;
                 }
@@ -162,7 +166,7 @@ static bool picopass_device_load_data(PicopassDevice* dev, FuriString* path, boo
         for(size_t i = 0; i < 6; i++) {
             furi_string_printf(temp_str, "Block %d", i);
             if(!flipper_format_read_hex(
-                   file, furi_string_get_cstr(temp_str), AA1[i].data, PICOPASS_BLOCK_LEN)) {
+                   file, furi_string_get_cstr(temp_str), AA1[i].data, RFAL_PICOPASS_BLOCK_LEN)) {
                 block_read = false;
                 break;
             }
@@ -174,7 +178,7 @@ static bool picopass_device_load_data(PicopassDevice* dev, FuriString* path, boo
         for(size_t i = 6; i < app_limit; i++) {
             furi_string_printf(temp_str, "Block %d", i);
             if(!flipper_format_read_hex(
-                   file, furi_string_get_cstr(temp_str), AA1[i].data, PICOPASS_BLOCK_LEN)) {
+                   file, furi_string_get_cstr(temp_str), AA1[i].data, RFAL_PICOPASS_BLOCK_LEN)) {
                 block_read = false;
                 break;
             }
@@ -338,9 +342,9 @@ ReturnCode picopass_device_parse_credential(PicopassBlock* AA1, PicopassPacs* pa
         }
     } else if(pacs->encryption == PicopassDeviceEncryptionNone) {
         FURI_LOG_D(TAG, "No Encryption");
-        memcpy(pacs->credential, AA1[7].data, PICOPASS_BLOCK_LEN);
-        memcpy(pacs->pin0, AA1[8].data, PICOPASS_BLOCK_LEN);
-        memcpy(pacs->pin1, AA1[9].data, PICOPASS_BLOCK_LEN);
+        memcpy(pacs->credential, AA1[7].data, RFAL_PICOPASS_BLOCK_LEN);
+        memcpy(pacs->pin0, AA1[8].data, RFAL_PICOPASS_BLOCK_LEN);
+        memcpy(pacs->pin1, AA1[9].data, RFAL_PICOPASS_BLOCK_LEN);
     } else if(pacs->encryption == PicopassDeviceEncryptionDES) {
         FURI_LOG_D(TAG, "DES Encrypted");
     } else {
@@ -352,8 +356,8 @@ ReturnCode picopass_device_parse_credential(PicopassBlock* AA1, PicopassPacs* pa
     return ERR_NONE;
 }
 
-ReturnCode picopass_device_parse_wiegand(uint8_t* data, PicopassWiegandRecord* record) {
-    uint32_t* halves = (uint32_t*)data;
+ReturnCode picopass_device_parse_wiegand(uint8_t* credential, PicopassWiegandRecord* record) {
+    uint32_t* halves = (uint32_t*)credential;
     if(halves[0] == 0) {
         uint8_t leading0s = __builtin_clz(REVERSE_BYTES_U32(halves[1]));
         record->bitLength = 31 - leading0s;
@@ -363,8 +367,16 @@ ReturnCode picopass_device_parse_wiegand(uint8_t* data, PicopassWiegandRecord* r
     }
     FURI_LOG_D(TAG, "bitLength: %d", record->bitLength);
 
+    // Remove sentinel bit from credential.  Byteswapping to handle array of bytes vs 64bit value
+    uint64_t sentinel = __builtin_bswap64(1ULL << record->bitLength);
+    uint64_t swapped = 0;
+    memcpy(&swapped, credential, sizeof(uint64_t));
+    swapped = swapped ^ sentinel;
+    memcpy(credential, &swapped, sizeof(uint64_t));
+    FURI_LOG_D(TAG, "PACS: (%d) %016llx", record->bitLength, swapped);
+
     if(record->bitLength == 26) {
-        uint8_t* v4 = data + 4;
+        uint8_t* v4 = credential + 4;
         uint32_t bot = v4[3] | (v4[2] << 8) | (v4[1] << 16) | (v4[0] << 24);
 
         record->CardNumber = (bot >> 1) & 0xFFFF;
