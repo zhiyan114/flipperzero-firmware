@@ -227,11 +227,10 @@ static int32_t esp_flasher_flash_bin(void* context) {
         loader_port_debug_print(err_msg);
     }
 
-#if 0 // still getting packet drops with this
     // higher BR
-    if(!err) {
+    if(!err && app->turbospeed) {
         loader_port_debug_print("Increasing speed for faster flash\n");
-        err = esp_loader_change_transmission_rate(230400);
+        err = esp_loader_change_transmission_rate(921600);
         if (err != ESP_LOADER_SUCCESS) {
             char err_msg[256];
             snprintf(
@@ -241,9 +240,8 @@ static int32_t esp_flasher_flash_bin(void* context) {
                 err);
             loader_port_debug_print(err_msg);
         }
-        furi_hal_uart_set_br(FuriHalUartIdUSART1, 230400);
+        furi_hal_uart_set_br(FuriHalUartIdUSART1, 921600);
     }
-#endif
 
     if(!err) {
         loader_port_debug_print("Connected\n");
@@ -251,10 +249,12 @@ static int32_t esp_flasher_flash_bin(void* context) {
             _flash_all_files(app);
         }
         app->switch_fw = SwitchNotSet;
-#if 0
-        loader_port_debug_print("Restoring transmission rate\n");
-        furi_hal_uart_set_br(FuriHalUartIdUSART1, 115200);
-#endif
+
+        if (app->turbospeed) {
+            loader_port_debug_print("Restoring transmission rate\n");
+            furi_hal_uart_set_br(FuriHalUartIdUSART1, 115200);
+        }
+
         loader_port_debug_print(
             "Done flashing. Please reset the board manually if it doesn't auto-reset.\n");
 
@@ -343,7 +343,7 @@ void esp_flasher_worker_stop_thread(EspFlasherApp* app) {
 }
 
 esp_loader_error_t loader_port_read(uint8_t* data, uint16_t size, uint32_t timeout) {
-    size_t read = furi_stream_buffer_receive(flash_rx_stream, data, size, pdMS_TO_TICKS(timeout));
+    size_t read = furi_stream_buffer_receive(flash_rx_stream, data, size, timeout);
     if(read < size) {
         return ESP_LOADER_ERROR_TIMEOUT;
     } else {
@@ -380,7 +380,7 @@ void loader_port_delay_ms(uint32_t ms) {
 
 void loader_port_start_timer(uint32_t ms) {
     _remaining_time = ms;
-    furi_timer_start(timer, pdMS_TO_TICKS(1));
+    furi_timer_start(timer, 1);
 }
 
 uint32_t loader_port_remaining_time(void) {

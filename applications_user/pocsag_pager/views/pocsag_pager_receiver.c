@@ -1,6 +1,7 @@
 #include "pocsag_pager_receiver.h"
 #include "../pocsag_pager_app_i.h"
 #include <pocsag_pager_icons.h>
+#include <time.h>
 #include <math.h>
 
 #include <input/input.h>
@@ -89,7 +90,7 @@ void pcsg_view_receiver_set_lock(PCSGReceiver* pcsg_receiver, PCSGLock lock) {
             PCSGReceiverModel * model,
             { model->bar_show = PCSGReceiverBarShowLock; },
             true);
-        furi_timer_start(pcsg_receiver->timer, pdMS_TO_TICKS(1000));
+        furi_timer_start(pcsg_receiver->timer, furi_ms_to_ticks(1000));
     } else {
         with_view_model(
             pcsg_receiver->view,
@@ -307,7 +308,7 @@ bool pcsg_view_receiver_input(InputEvent* event, void* context) {
             { model->bar_show = PCSGReceiverBarShowToUnlockPress; },
             true);
         if(pcsg_receiver->lock_count == 0) {
-            furi_timer_start(pcsg_receiver->timer, pdMS_TO_TICKS(1000));
+            furi_timer_start(pcsg_receiver->timer, furi_ms_to_ticks(1000));
         }
         if(event->key == InputKeyBack && event->type == InputTypeShort) {
             pcsg_receiver->lock_count++;
@@ -320,7 +321,7 @@ bool pcsg_view_receiver_input(InputEvent* event, void* context) {
                 { model->bar_show = PCSGReceiverBarShowUnlock; },
                 true);
             pcsg_receiver->lock = PCSGLockOff;
-            furi_timer_start(pcsg_receiver->timer, pdMS_TO_TICKS(650));
+            furi_timer_start(pcsg_receiver->timer, furi_ms_to_ticks(650));
         }
 
         return true;
