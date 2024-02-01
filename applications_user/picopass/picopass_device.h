@@ -40,8 +40,8 @@
 // Crypt1 // 1+1 (crypt1+crypt0) means secured and keys changable
 #define PICOPASS_FUSE_CRYPT1 0x10
 // Crypt0 // 1+0 means secure and keys locked, 0+1 means not secured, 0+0 means disable auth entirely
-#define PICOPASS_FUSE_CRTPT0 0x08
-#define PICOPASS_FUSE_CRYPT10 (PICOPASS_FUSE_CRYPT1 | PICOPASS_FUSE_CRTPT0)
+#define PICOPASS_FUSE_CRYPT0 0x08
+#define PICOPASS_FUSE_CRYPT10 (PICOPASS_FUSE_CRYPT1 | PICOPASS_FUSE_CRYPT0)
 // Read Access, 1 meanns anonymous read enabled, 0 means must auth to read applicaion
 #define PICOPASS_FUSE_RA 0x01
 
@@ -71,6 +71,7 @@ typedef enum {
     PicopassDeviceSaveFormatHF,
     PicopassDeviceSaveFormatLF,
     PicopassDeviceSaveFormatSeader,
+    PicopassDeviceSaveFormatPartial,
 } PicopassDeviceSaveFormat;
 
 typedef enum {
@@ -101,7 +102,7 @@ typedef struct {
 } PicopassBlock;
 
 typedef struct {
-    PicopassBlock AA1[PICOPASS_MAX_APP_LIMIT];
+    PicopassBlock card_data[PICOPASS_MAX_APP_LIMIT];
     PicopassPacs pacs;
 } PicopassDeviceData;
 
@@ -147,6 +148,6 @@ void picopass_device_set_loading_callback(
     PicopassLoadingCallback callback,
     void* context);
 
-void picopass_device_parse_credential(PicopassBlock* AA1, PicopassPacs* pacs);
+void picopass_device_parse_credential(PicopassBlock* card_data, PicopassPacs* pacs);
 void picopass_device_parse_wiegand(uint8_t* credential, PicopassPacs* pacs);
 bool picopass_device_hid_csn(PicopassDevice* dev);

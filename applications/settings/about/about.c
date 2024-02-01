@@ -205,7 +205,7 @@ static DialogMessageButton about_screen_fw_version(DialogsApp* dialogs, DialogMe
 }
 
 const AboutDialogScreen about_screens[] = {
-    about_owner_info
+    about_owner_info,
     about_screen_product,
     about_screen_compliance,
     about_screen_address,
