@@ -9,7 +9,7 @@ App(
     order=30,
     resources="resources",
     sources=[
-        "*.c",
+        "*.c*",
         "!plugins",
         "!nfc_cli.c",
     ],
@@ -118,6 +118,123 @@ App(
     requires=["nfc"],
     sources=["plugins/supported_cards/hid.c"],
 )
+
+App(
+    appid="clipper_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="clipper_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/clipper.c"],
+)
+
+App(
+    appid="gallagher_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="gallagher_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/gallagher.c"],
+)
+
+App(
+    appid="hi_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="hi_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/hi.c"],
+)
+
+App(
+    appid="itso_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="itso_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/itso.c"],
+)
+
+App(
+    appid="kazan_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="kazan_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/kazan.c"],
+)
+
+App(
+    appid="metromoney_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="metromoney_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/metromoney.c"],
+)
+
+App(
+    appid="microel_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="microel_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/microel.c"],
+)
+
+App(
+    appid="mizip_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="mizip_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/mizip.c"],
+)
+
+App(
+    appid="saflok_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="saflok_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/saflok.c"],
+)
+
+App(
+    appid="social_moscow_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="social_moscow_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/social_moscow.c"],
+)
+
+App(
+    appid="zolotaya_korona_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="zolotaya_korona_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/zolotaya_korona.c"],
+)
+
+App(
+    appid="zolotaya_korona_online_parser",
+    apptype=FlipperAppType.PLUGIN,
+    entry_point="zolotaya_korona_online_plugin_ep",
+    targets=["f7"],
+    requires=["nfc"],
+    sources=["plugins/supported_cards/zolotaya_korona_online.c"],
+)
+
+# App(
+#     appid="emv_parser",
+#     apptype=FlipperAppType.PLUGIN,
+#     entry_point="emv_plugin_ep",
+#     targets=["f7"],
+#     requires=["nfc", "storage"],
+#     sources=["plugins/supported_cards/emv.c", "helpers/nfc_emv_parser.c"],
+# )
 
 App(
     appid="nfc_start",
