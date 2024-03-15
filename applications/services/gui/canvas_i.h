@@ -107,7 +107,7 @@ CanvasOrientation canvas_get_orientation(const Canvas* canvas);
 
 /** Draw a u8g2 bitmap
  *
- * @param      canvas   Canvas instance
+ * @param      u8g2     u8g2 instance
  * @param      x        x coordinate
  * @param      y        y coordinate
  * @param      width    width
@@ -122,7 +122,7 @@ void canvas_draw_u8g2_bitmap(
     uint8_t width,
     uint8_t height,
     const uint8_t* bitmap,
-    uint8_t rotation);
+    IconRotation rotation);
 
 /** Add canvas commit callback.
  *
