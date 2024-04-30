@@ -1,5 +1,6 @@
 #include <furi_hal_region.h>
 #include <furi_hal_version.h>
+#include <furi.h>
 
 const FuriHalRegion furi_hal_region_zero = {
     .country_code = "00",
@@ -86,22 +87,21 @@ void furi_hal_region_init() {
     //}
 }
 
-const FuriHalRegion* furi_hal_region_get() {
+const FuriHalRegion* furi_hal_region_get(void) {
     return furi_hal_region;
 }
 
 void furi_hal_region_set(FuriHalRegion* region) {
+    furi_check(region);
+
     //furi_hal_region = region;
-    if(region) {
-        furi_hal_region = &furi_hal_region_zero;
-    }
 }
 
-bool furi_hal_region_is_provisioned() {
+bool furi_hal_region_is_provisioned(void) {
     return furi_hal_region != NULL;
 }
 
-const char* furi_hal_region_get_name() {
+const char* furi_hal_region_get_name(void) {
     if(furi_hal_region) {
         return furi_hal_region->country_code;
     } else {
