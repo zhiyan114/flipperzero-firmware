@@ -22,8 +22,9 @@ static void multi_converter_render_callback(Canvas* const canvas, void* ctx) {
 }
 
 static void
-    multi_converter_input_callback(InputEvent* input_event, FuriMessageQueue* event_queue) {
-    furi_assert(event_queue);
+    multi_converter_input_callback(InputEvent* input_event, void* ctx) {
+    furi_assert(ctx);
+    FuriMessageQueue* event_queue = ctx;
 
     MultiConverterEvent event = {.type = EventTypeKey, .input = *input_event};
     furi_message_queue_put(event_queue, &event, FuriWaitForever);
@@ -148,8 +149,8 @@ int32_t multi_converter_app(void* p) {
             }
         }
 
-        view_port_update(view_port);
         furi_mutex_release(multi_converter_state->mutex);
+        view_port_update(view_port);
     }
 
     view_port_enabled_set(view_port, false);
