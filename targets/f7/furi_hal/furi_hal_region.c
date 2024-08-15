@@ -81,9 +81,11 @@ static const FuriHalRegion* const furi_hal_static_regions[] = {
 static FuriHalRegion* furi_hal_dynamic_region;
 static FuriMutex* furi_hal_dynamic_region_mutex;
 
+
 void furi_hal_region_init(void) {
     furi_assert(furi_hal_dynamic_region_mutex == NULL);
     furi_hal_dynamic_region_mutex = furi_mutex_alloc(FuriMutexTypeNormal);
+    furi_hal_region = &furi_hal_region_zero;
 }
 
 const FuriHalRegion* furi_hal_region_get(void) {
@@ -112,7 +114,7 @@ void furi_hal_region_set(FuriHalRegion* region) {
         free(furi_hal_dynamic_region);
     }
 
-    furi_hal_dynamic_region = region;
+    //furi_hal_dynamic_region = region;
 
     furi_check(furi_mutex_release(furi_hal_dynamic_region_mutex) == FuriStatusOk);
 }
