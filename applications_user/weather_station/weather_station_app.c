@@ -31,7 +31,6 @@ WeatherStationApp* weather_station_app_alloc() {
     // View Dispatcher
     app->view_dispatcher = view_dispatcher_alloc();
     app->scene_manager = scene_manager_alloc(&weather_station_scene_handlers, app);
-    view_dispatcher_enable_queue(app->view_dispatcher);
 
     view_dispatcher_set_event_callback_context(app->view_dispatcher, app);
     view_dispatcher_set_custom_event_callback(
@@ -98,6 +97,14 @@ WeatherStationApp* weather_station_app_alloc() {
         app->txrx->environment, (void*)&weather_station_protocol_registry);
     app->txrx->receiver = subghz_receiver_alloc_init(app->txrx->environment);
 
+    subghz_devices_init();
+
+    app->txrx->radio_device =
+        radio_device_loader_set(app->txrx->radio_device, SubGhzRadioDeviceTypeExternalCC1101);
+
+    subghz_devices_reset(app->txrx->radio_device);
+    subghz_devices_idle(app->txrx->radio_device);
+
     subghz_receiver_set_filter(app->txrx->receiver, SubGhzProtocolFlag_Decodable);
     subghz_worker_set_overrun_callback(
         app->txrx->worker, (SubGhzWorkerOverrunCallback)subghz_receiver_reset);
@@ -115,8 +122,10 @@ WeatherStationApp* weather_station_app_alloc() {
 void weather_station_app_free(WeatherStationApp* app) {
     furi_assert(app);
 
-    //CC1101 off
-    ws_sleep(app);
+    subghz_devices_sleep(app->txrx->radio_device);
+    radio_device_loader_end(app->txrx->radio_device);
+
+    subghz_devices_deinit();
 
     // Submenu
     view_dispatcher_remove_view(app->view_dispatcher, WeatherStationViewSubmenu);
